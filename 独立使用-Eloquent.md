@@ -1,9 +1,19 @@
 ---
 title: 独立使用 Eloquent
+tags:
+  - Eloquent
+  - 教程
+  - Laravel
+  - PHP
+categories:
+  - Laravel
+keywords:
+  - Eloquent
+  - 教程
+  - Laravel
+  - PHP
+abbrlink: a97f5e57
 date: 2018-07-04 14:14:22
-tags: [Eloquent,教程,Laravel,PHP]
-categories: [Laravel]
-keywords: [Eloquent,教程,Laravel,PHP]
 ---
 ## 前言
 Laravel 的 Eloquent 是一个很棒的ORM，Eloquent 是独立的模块，我们也可以在自己的项目里通过composer来使用Eloquent，本文就详细讲解如何在自己的项目集成 Eloquent。
