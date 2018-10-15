@@ -16,6 +16,21 @@ date: 2018-06-08 11:56:23
 
 ### 使用
 ```php
+//paginate 源码
+public function paginate($perPage = 15, $columns = ['*'], $pageName = 'page', $page = null)
+    {
+        $page = $page ?: Paginator::resolveCurrentPage($pageName);
+
+        $total = $this->getCountForPagination($columns);
+
+        $results = $total ? $this->forPage($page, $perPage)->get($columns) : collect();
+
+        return $this->paginator($results, $total, $perPage, $page, [
+            'path' => Paginator::resolveCurrentPath(),
+            'pageName' => $pageName,
+        ]);
+    }
+
 public function showApi(Request $request)
     {
 
@@ -23,6 +38,7 @@ public function showApi(Request $request)
       //$page  = $request->get('page');
         $results = Seller::paginate($limit); //无须接收 $page ,laravel 自动接收
       //$results = Seller::forPage($page,$limit)->get();  或者用这种 
+      //$results = Seller::paginate($limit,['*'],'page',5); //paginate 控制page
         return response()->json(['code' => 0, 'data' => $results->items(), 'count' => $results->total()]);
     }
 ```
