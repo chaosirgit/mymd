@@ -59,6 +59,25 @@ public function getUsers(Request $request){
     return response()->json($results);
 }
 ```
+如果不想用 `append` 方法的关联关系可以这样用 或者报 `Method items does not exist.` 时
+```php
+
+    public function myCart(Request $request){
+        $limit = $request->get('limit',10);
+        $results = User::orderBy('id','desc')->paginate($limit);
+        
+        $data = $results->getCollection();
+
+        $data->transform(function($item,$key){
+            $item->all_name = $item->username . ' '.$item->nickname;
+            return $item;   //如果不 return 出去返回的是 null
+        });
+        
+        $results->setCollection($data);
+        
+        return $this->pageDate($results);
+    }
+```
 ### 在接口中临时隐藏
 如果已经添加了很多 `appends` 属性，那么把上边临时显示的
 ```php
