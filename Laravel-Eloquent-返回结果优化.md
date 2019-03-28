@@ -62,7 +62,7 @@ public function getUsers(Request $request){
 如果不想用 `append` 方法的关联关系可以这样用 或者报 `Method items does not exist.` 时
 ```php
 
-    public function myCart(Request $request){
+    public function getUsers(Request $request){
         $limit = $request->get('limit',10);
         $results = User::orderBy('id','desc')->paginate($limit);
         
