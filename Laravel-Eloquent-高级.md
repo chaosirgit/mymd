@@ -208,3 +208,19 @@ public function getStatusNameAttribute(){
 
 ```
 再加状态只需要加数组上就可以了
+
+### 获取未评价的商品
+
+```php
+<?php
+    //获取未评价的商品
+    public function getEvaluateProduct(Request $request){
+        $order_id = $request->get('order_id',null);
+        if (empty($order_id)){
+            return $this->error('参数错误');
+        }
+        $results = OrderProduct::where('order_id',$order_id)->doesntHave('productEvaluate')->get();
+        return $this->success($results);
+    }
+
+```
