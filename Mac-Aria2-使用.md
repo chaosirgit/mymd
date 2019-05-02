@@ -13,7 +13,7 @@ keywords:
   - 网盘
   - Aria2
 categories:
-  - 生活
+  - 工具
 abbrlink: 51a12e8a
 date: 2019-04-27 16:36:20
 ---
