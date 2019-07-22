@@ -228,7 +228,7 @@ php artisan workman start -d
 
 ### 测试
 在浏览器 F12 打开调试模式，在 Console 里输入
-```
+```javascript
 // 打开一个WebSocket:
 var ws = new WebSocket('ws://localhost:2019');
 // 响应onmessage事件:
