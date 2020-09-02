@@ -52,14 +52,14 @@ class WorkerMan extends Command
      *
      * @var string
      */
-    protected $signature = 'workman {action} {--d}';
+    protected $signature = 'workerman {action} {--d}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Start a Workerman server.';
+    protected $description = 'Start a Workerman server';
 
     /**
      * Create a new command instance.
@@ -95,57 +95,136 @@ class WorkerMan extends Command
         $this->startRegister();
         Worker::runAll();
     }
-    //BusinessWorker是运行业务逻辑的进程，BusinessWorker收到Gateway转发来的事件及请求时会默认调用Events.php中的onConnect onMessage 
+
+    //BusinessWorker是运行业务逻辑的进程，BusinessWorker收到Gateway转发来的事件及请求时会默认调用Events.php中的onConnect onMessage
     private function startBusinessWorker()
     {
         $worker                  = new BusinessWorker();
-        $worker->name            = 'BusinessWorker';        //设置BusinessWorker进程的名称
-        $worker->count           = 1;       //设置BusinessWorker进程的数量
-        $worker->registerAddress = '127.0.0.1:2018';        //注册服务地址-向Register进程注册-内部通讯使用
-        $worker->eventHandler    = \App\Workerman\Events::class;        //设置使用哪个类来处理业务,业务类至少要实现onMessage静态方法，onConnect和onClose静态方法可以不用实现
+        $worker->name            = config('gateway.business.name');        //设置BusinessWorker进程的名称
+        $worker->count           = config('gateway.business.count');       //设置BusinessWorker进程的数量
+        $worker->registerAddress = config('gateway.business.register_address');        //注册服务地址-向Register进程注册-内部通讯使用
+        $worker->eventHandler    = config('gateway.business.event');        //设置使用哪个类来处理业务,业务类至少要实现onMessage静态方法，onConnect和onClose静态方法可以不用实现
     }
 
     private function startGateWay()
     {
-        // 证书最好是申请的证书-开启wss 打开注释
-        /**
-        * Workerman版本不小于3.3.7
-        * PHP安装了openssl扩展 
-        * 已经申请了证书（pem/crt文件及key文件）放在磁盘某个目录(位置任意)
-        $context = array(
-            // 更多ssl选项请参考手册 http://php.net/manual/zh/context.ssl.php
-            'ssl' => array(
-                // 请使用绝对路径
-                'local_cert'                 => '磁盘路径/server.pem', // 也可以是crt文件
-                'local_pk'                   => '磁盘路径/server.key',
-                'verify_peer'               => false,
-                // 'allow_self_signed' => true, //如果是自签名证书需要开启此选项
-            )
-        );
-        */
-        $gateway = new Gateway("websocket://0.0.0.0:2019");
-        // 开启SSL，websocket+SSL 即wss websocket协议(端口任意，只要没有被其它程序占用就行)
-        //  $gateway = new Gateway("websocket://0.0.0.0:443", $context);
-        //  $gateway->transport = 'ssl';
-        $gateway->name                 = 'Gateway';     //设置Gateway进程的名称，方便status命令中查看统计
-        $gateway->count                = 1;     //进程的数量
-        $gateway->lanIp                = '127.0.0.1';       //内网ip,多服务器分布式部署的时候需要填写真实的内网ip
-        $gateway->startPort            = 2010;      //监听本机端口的起始端口
-        $gateway->pingInterval         = 30;        //心跳检测时间间隔 单位：秒。如果设置为0代表不做任何心跳检测。
-        $gateway->pingNotResponseLimit = 0;     //客户端连续$pingNotResponseLimit次$pingInterval时间内不发送任何数据则断开链接，并触发onClose。 如果设置为0代表客户端不用发送心跳数据
+        $address = config('gateway.gateway.address');
+        $port    = config('gateway.gateway.port');
+        if (config('gateway.gateway.ssl_open')) {
+            // 证书最好是申请的证书-开启wss 打开注释
+            /**
+             * Workerman版本不小于3.3.7
+             * PHP安装了openssl扩展
+             * 已经申请了证书（pem/crt文件及key文件）放在磁盘某个目录(位置任意)
+             * */
+            $context = array(
+                // 更多ssl选项请参考手册 http://php.net/manual/zh/context.ssl.php
+                'ssl' => array(
+                    // 请使用绝对路径
+                    'local_cert'        => config('gateway.gateway.ssl.local_cert'), // 也可以是crt文件
+                    'local_pk'          => config('gateway.gateway.ssl.local_pk'),
+                    'verify_peer'       => config('gateway.gateway.ssl.verify_peer'),
+                    'allow_self_signed' => config('gateway.gateway.ssl.allow_self_signed'), //如果是自签名证书需要开启此选项
+                )
+            );
 
-        $gateway->pingData             = '{"type":"@heart@"}';      //当需要服务端定时给客户端发送心跳数据时， $gateway->pingData设置为服务端要发送的心跳请求数据，心跳数据是任意的，只要客户端能识别即可。
-        $gateway->registerAddress      = '127.0.0.1:2018';      //注册服务地址-向Register进程注册-内部通讯使用
+            // 开启SSL，websocket+SSL 即wss websocket协议(端口任意，只要没有被其它程序占用就行)
+
+            $gateway            = new Gateway($address . ':' . $port, $context);
+            $gateway->transport = 'ssl';
+            //  $gateway = new Gateway("websocket://0.0.0.0:443", $context);
+        } else {
+            $gateway = new Gateway($address . ':' . $port);
+        }
+
+        $gateway->name                 = config('gateway.gateway.name');     //设置Gateway进程的名称，方便status命令中查看统计
+        $gateway->count                = config('gateway.gateway.count');     //进程的数量
+        $gateway->lanIp                = config('gateway.gateway.lan_ip');       //内网ip,多服务器分布式部署的时候需要填写真实的内网ip
+        $gateway->startPort            = config('gateway.gateway.start_port');      //监听本机端口的起始端口
+        $gateway->pingInterval         = config('gateway.gateway.heart_ping');        //心跳检测时间间隔 单位：秒。如果设置为0代表不做任何心跳检测。
+        $gateway->pingNotResponseLimit = config('gateway.gateway.ping_not');     //客户端连续$pingNotResponseLimit次$pingInterval时间内不发送任何数据则断开链接，并触发onClose。 如果设置为0代表客户端不用发送心跳数据
+
+        $gateway->pingData        = config('gateway.gateway.ping_data');      //当需要服务端定时给客户端发送心跳数据时， $gateway->pingData设置为服务端要发送的心跳请求数据，心跳数据是任意的，只要客户端能识别即可。
+        $gateway->registerAddress = config('gateway.gateway.register_address');      //注册服务地址-向Register进程注册-内部通讯使用
     }
 
     /**
-    * Gateway进程和BusinessWorker进程启动后分别向Register进程注册自己的通讯地址，Gateway进程和BusinessWorker通过Register进程得到通讯地址后，就可以建立起连接并通讯了。
-    */
+     * Gateway进程和BusinessWorker进程启动后分别向Register进程注册自己的通讯地址，Gateway进程和BusinessWorker通过Register进程得到通讯地址后，就可以建立起连接并通讯了。
+     */
     private function startRegister()
     {
-        new Register('text://0.0.0.0:2018');
+        new Register(config('gateway.start.address'));
     }
 }
+
+```
+
+### 创建 `config/gateway.php` 文件
+```php
+<?php
+
+
+return [
+    //BusinessWorker是运行业务逻辑的进程，BusinessWorker收到Gateway转发来的事件及请求时会默认调用Events.php中的onConnect onMessage
+    'business' => [
+        //注册服务地址-向Register进程注册-内部通讯使用
+        'register_address' => env('BUSINESS_REGISTER_ADDRESS', '127.0.0.1:2020'),
+        //设置BusinessWorker进程的名称
+        'name'             => env('BUSINESS_NAME', 'BusinessWorker'),
+        //设置BusinessWorker进程的数量
+        'count'            => env('BUSINESS_COUNT', 2),
+        //设置使用哪个类来处理业务,业务类至少要实现onMessage静态方法，onConnect和onClose静态方法可以不用实现
+        'event'            => env('BUSINESS_EVENT', \App\Workerman\Events::class),
+    ],
+    'gateway'  => [
+        /**
+         * Workerman版本不小于3.3.7
+         * PHP安装了openssl扩展
+         * 已经申请了证书（pem/crt文件及key文件）放在磁盘某个目录(位置任意)
+         * 更多ssl选项请参考手册 http://php.net/manual/zh/context.ssl.php
+         */
+
+        //默认关闭 SSL,开启 需要配置 ssl内容
+        'ssl_open' => env('GATEWAY_SSL', false),
+        'ssl'      => [
+            // 磁盘路径/server.pem 也可以是crt文件
+            'local_cert' => env('GATEWAY_SSL_LOCAL_CERT', ''),
+            // 磁盘路径/server.key
+            'local_pk'   => env('GATEWAY_SSL_LOCAL_PK', ''),
+
+            'verify_peer'       => env('GATEWAY_VERIFY_PEER', false),
+            //如果是自签名证书需要开启此选项
+            'allow_self_signed' => env('GATEWAY_SELF_SIGNED', false),
+        ],
+
+        'address'          => env('GATEWAY_ADDRESS', 'websocket://0.0.0.0'),
+        //websocket协议 端口
+        'port'             => env('GATEWAY_PORT', '2021'),
+        //开启SSL，websocket+SSL 即wss websocket协议(端口任意，只要没有被其它程序占用就行)
+        //'address' => env('GATEWAY_ADDRESS','websocket://0.0.0.0:443')
+
+        //设置Gateway进程的名称，方便status命令中查看统计
+        'name'             => env('GATEWAY_NAME', 'Gateway'),
+        //进程的数量
+        'count'            => env('GATEWAY_COUNT', 2),
+        //内网ip,多服务器分布式部署的时候需要填写真实的内网ip
+        'lan_ip'           => env('GATEWAY_LAN_IP', '127.0.0.1'),
+        //监听本机端口的起始端口
+        'start_port'       => env('GATEWAY_START_PORT', 2010),
+        //心跳检测时间间隔 单位：秒。如果设置为0代表不做任何心跳检测。
+        'heart_ping'       => env('GATEWAY_HEART_PING', 30),
+        //客户端连续 ping_not 次 heart_ping 时间内不发送任何数据则断开链接，并触发onClose。 如果设置为0代表客户端不用发送心跳数据
+        'ping_not'         => env('GATEWAY_PING_NOT', 0),
+        //当需要服务端定时给客户端发送心跳数据时， $gateway->pingData设置为服务端要发送的心跳请求数据，心跳数据是任意的，只要客户端能识别即可。
+        'ping_data'        => env('GATEWAY_PING_DATA', '{"type":"@heart@"}'),
+        //注册服务地址-向Register进程注册-内部通讯使用
+        'register_address' => env('GATEWAY_REGISTER_ADDRESS', '127.0.0.1:2020'),
+    ],
+    'start'    => [
+        //Gateway进程和BusinessWorker进程启动后分别向Register进程注册自己的通讯地址，Gateway进程和BusinessWorker通过Register进程得到通讯地址后，就可以建立起连接并通讯了。
+        'address' => env('GATEWAY_START_ADDRESS', 'text://0.0.0.0:2020'),
+    ],
+];
 
 ```
 
@@ -159,25 +238,27 @@ namespace App\Workerman;
 
 
 use GatewayWorker\Lib\Gateway;
+use Illuminate\Support\Facades\Log;
+use Workerman\Lib\Timer;
 
 class Events
 {
     /**
-    * 当businessWorker进程启动时触发。每个进程生命周期内都只会触发一次。
-    * @param $businessWorker businessWorker进程实例
-    */
+     * 当businessWorker进程启动时触发。每个进程生命周期内都只会触发一次。
+     * @param $businessWorker businessWorker进程实例
+     */
     public static function onWorkerStart($businessWorker)
     {
     }
-    
+
     /**
-    * 当客户端连接上gateway进程时(TCP三次握手完毕时)触发的回调函数。
-    * @param $client_id 固定为20个字符的字符串，用来全局标记一个socket连接，每个客户端连接都会被分配一个全局唯一的client_id。如果client_id对应的客
-    *                   户端连接断开了，那么这个client_id也就失效了。当这个客户端再次连接到Gateway时，将会获得一个新的client_id。也就是说
-    *                   client_id和客户端的socket连接生命周期是一致的。
-    *                   client_id一旦被使用过，将不会被再次使用，也就是说client_id是不会重复的，即使分布式部署也不会重复。
-    *                   只要有client_id，并且对应的客户端在线，就可以调用Gateway::sendToClient($client_id, $data)等方法向这个客户端发送数据。
-    */
+     * 当客户端连接上gateway进程时(TCP三次握手完毕时)触发的回调函数。
+     * @param $client_id 固定为20个字符的字符串，用来全局标记一个socket连接，每个客户端连接都会被分配一个全局唯一的client_id。如果client_id对应的客
+     *                   户端连接断开了，那么这个client_id也就失效了。当这个客户端再次连接到Gateway时，将会获得一个新的client_id。也就是说
+     *                   client_id和客户端的socket连接生命周期是一致的。
+     *                   client_id一旦被使用过，将不会被再次使用，也就是说client_id是不会重复的，即使分布式部署也不会重复。
+     *                   只要有client_id，并且对应的客户端在线，就可以调用Gateway::sendToClient($client_id, $data)等方法向这个客户端发送数据。
+     */
     public static function onConnect($client_id)
     {
 //        Gateway::sendToCurrentClient("Your client_id is $client_id");
@@ -188,34 +269,35 @@ class Events
     }
 
     /**
-    * 当客户端连接上gateway完成websocket握手时触发的回调函数。
-    * 注意：此回调只有gateway为websocket协议并且gateway没有设置onWebSocketConnect时才有效。
-    * @param $client_id 固定为20个字符的字符串，用来全局标记一个socket连接，每个客户端连接都会被分配一个全局唯一的client_id。
-    * @param $data websocket握手时的http头数据，包含get、server等变量
-    */
+     * 当客户端连接上gateway完成websocket握手时触发的回调函数。
+     * 注意：此回调只有gateway为websocket协议并且gateway没有设置onWebSocketConnect时才有效。
+     * @param $client_id 固定为20个字符的字符串，用来全局标记一个socket连接，每个客户端连接都会被分配一个全局唯一的client_id。
+     * @param $data websocket握手时的http头数据，包含get、server等变量
+     */
     public static function onWebSocketConnect($client_id, $data)
     {
     }
-    
+
     /**
-    * 当客户端发来数据(Gateway进程收到数据)后触发的回调函数
-    * @param $client_id 全局唯一的客户端socket连接标识
-    * @param $message 完整的客户端请求数据，数据类型取决于Gateway所使用协议的decode方法返的回值类型
-    */
+     * 当客户端发来数据(Gateway进程收到数据)后触发的回调函数
+     * @param $client_id 全局唯一的客户端socket连接标识
+     * @param $message 完整的客户端请求数据，数据类型取决于Gateway所使用协议的decode方法返的回值类型
+     */
     public static function onMessage($client_id, $message)
     {
-
+        
     }
-    
+
     /**
-    * 客户端与Gateway进程的连接断开时触发。不管是客户端主动断开还是服务端主动断开，都会触发这个回调。一般在这里做一些数据清理工作。
-    * 注意：onClose回调里无法使用Gateway::getSession()来获得当前用户的session数据，但是仍然可以使用$_SESSION变量获得。
-    * 注意：onClose回调里无法使用Gateway::getUidByClientId()接口来获得uid，解决办法是在Gateway::bindUid()时记录一个$_SESSION['uid']，onClose的时候用$_SESSION['uid']来获得uid。
-    * 注意：断网断电等极端情况可能无法及时触发onClose回调，因为这种情况客户端来不及给服务端发送断开连接的包(fin包)，服务端就无法得知连接已经断开。检测这种极端情况需要心跳检测，并且必须设置$gateway->pingNotResponseLimit>0。这种断网断电的极端情况onClose将被延迟触发，延迟时间为小于$gateway->pingInterval*$gateway->pingNotResponseLimit秒，如果$gateway->pingInterval 和 $gateway->pingNotResponseLimit 中任何一个为0，则可能会无限延迟。
-    * @param $client_id 全局唯一的client_id
-    */
+     * 客户端与Gateway进程的连接断开时触发。不管是客户端主动断开还是服务端主动断开，都会触发这个回调。一般在这里做一些数据清理工作。
+     * 注意：onClose回调里无法使用Gateway::getSession()来获得当前用户的session数据，但是仍然可以使用$_SESSION变量获得。
+     * 注意：onClose回调里无法使用Gateway::getUidByClientId()接口来获得uid，解决办法是在Gateway::bindUid()时记录一个$_SESSION['uid']，onClose的时候用$_SESSION['uid']来获得uid。
+     * 注意：断网断电等极端情况可能无法及时触发onClose回调，因为这种情况客户端来不及给服务端发送断开连接的包(fin包)，服务端就无法得知连接已经断开。检测这种极端情况需要心跳检测，并且必须设置$gateway->pingNotResponseLimit>0。这种断网断电的极端情况onClose将被延迟触发，延迟时间为小于$gateway->pingInterval*$gateway->pingNotResponseLimit秒，如果$gateway->pingInterval 和 $gateway->pingNotResponseLimit 中任何一个为0，则可能会无限延迟。
+     * @param $client_id 全局唯一的client_id
+     */
     public static function onClose($client_id)
     {
+
     }
 }
 ```
@@ -230,11 +312,23 @@ php artisan workman start -d
 在浏览器 F12 打开调试模式，在 Console 里输入
 ```javascript
 // 打开一个WebSocket:
-var ws = new WebSocket('ws://localhost:2019');
+var ws = new WebSocket('ws://localhost:2020');
 // 响应onmessage事件:
 ws.onmessage = function(msg) {
                     console.log(msg); 
                };
 // 给服务器发送一个字符串:
 ws.send('Hello!');
+```
+
+
+### 代码中使用
+```php
+<?php
+    use GatewayWorker\Lib\Gateway;
+    
+            Gateway::$registerAddress = config('gateway.gateway.register_address');
+            Gateway::bindUid($client_id,$user_id);
+            
+            
 ```
