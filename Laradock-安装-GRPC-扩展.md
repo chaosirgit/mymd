@@ -31,16 +31,16 @@ date: 2021-06-30 23:31:29
 
 在 `workspace` 配置参数段
 
-````
+```yaml
 workspace:
       build:
         context: ./workspace
         args:
-````
+```
 
 添加
 
-```
+```yaml
 - INSTALL_PHPGRPC=${WORKSPACE_INSTALL_PHPGRPC}
 ```
 
@@ -50,7 +50,7 @@ workspace:
 
 增加两个配置项
 
-```
+```ini
 PHP_FPM_INSTALL_PHPGRPC=true
 WORKSPACE_INSTALL_PHPGRPC=true
 ```
@@ -59,7 +59,7 @@ WORKSPACE_INSTALL_PHPGRPC=true
 
 `laradock/php-fpm/Dockerfile`
 
-```
+```dockerfile
 ###########################################################################
 # php grpc extension
 ###########################################################################
@@ -76,7 +76,7 @@ RUN if [ ${INSTALL_PHPGRPC} = true ]; then \
 
 `laradock/workspace/Dockerfile`
 
-```
+```dockerfile
 ###########################################################################
 # PHP GRPC EXTENSION
 ###########################################################################
